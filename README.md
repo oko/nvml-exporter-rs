@@ -8,8 +8,16 @@ This is a Rust implementation of an NVML exporter for Prometheus.
 
 ## Building
 
+Non-Windows-service binary:
+
 ```
 cargo build
+```
+
+Windows service binary:
+
+```shell
+cargo build --bin nvml_exporter_svc --features=winsvc
 ```
 
 ## Running
@@ -39,3 +47,13 @@ New metrics may be added by:
 1. Adding the field to the `Metrics` struct. `Gauge` should be used for global (system-wide) metrics, whereas `GaugeVec` should be used for metrics that are per-device.
 2. Adding the field initialization to `Metrics::new()` with the appropriate macro.
 3. Adding the collection implementation to `main::gather()`.
+
+## Packaging
+
+Build the Chocolatey package with:
+
+```powershell
+cargo build --bin nvml_exporter_svc --features=winsvc
+cd packages
+choco pack ; choco uninstall nvml-exporter ; choco install nvml-exporter -dv -s . --force -y
+```

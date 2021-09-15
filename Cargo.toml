@@ -3,7 +3,14 @@ name = "nvml-exporter-rs"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "nvml_exporter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nvml_exporter_svc"
+path = "src/winsvc/winsvc.rs"
+required-features = ["winsvc"]
 
 [dependencies]
 nvml-wrapper = "0.7.0"
@@ -12,3 +19,14 @@ hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 clap = "3.0.0-beta.4"
 futures = "0.3.16"
+warp = "0.3.1"
+log = "0.4.14"
+stderrlog = "0.5.1"
+term = "0.7.0"
+chrono = "0.4.19"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = {version = "0.4.0", optional = true}
+
+[features]
+winsvc = ["windows-service"]
