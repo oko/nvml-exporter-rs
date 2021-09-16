@@ -6,10 +6,7 @@ use std::{ffi::OsString, sync::mpsc, time::Duration};
 use tokio::runtime::Runtime;
 use windows_service::{
     define_windows_service,
-    service::{
-        ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
-        ServiceType,
-    },
+    service::{ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus, ServiceType},
     service_control_handler::{self, ServiceControlHandlerResult},
     service_dispatcher, Result,
 };
@@ -70,15 +67,10 @@ pub fn run_service() -> Result<()> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async {
-        let (binds, senders) = nvml_exporter::server_setup(
-            std::env::args_os()
-                .into_iter()
-                .map(|s| s.into_string().unwrap())
-                .collect(),
-        );
+        let (binds, senders, opts) = nvml_exporter::server_setup(std::env::args_os().into_iter().map(|s| s.into_string().unwrap()).collect());
 
         let server = tokio::task::spawn(async move {
-            nvml_exporter::serve(binds).await;
+            nvml_exporter::serve(binds, opts).await;
         });
 
         let ctrl_c = tokio::task::spawn(async move {

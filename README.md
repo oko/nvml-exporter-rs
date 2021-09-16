@@ -53,7 +53,11 @@ New metrics may be added by:
 Build the Chocolatey package with:
 
 ```powershell
-cargo build --bin nvml_exporter_svc --features=winsvc
-cd packages
-choco pack ; choco uninstall nvml-exporter ; choco install nvml-exporter -dv -s . --force -y
+.\scripts\mkchoco.bat
+```
+
+Install the Chocolatey package you just built with:
+
+```powershell
+.\scripts\install.bat
 ```
