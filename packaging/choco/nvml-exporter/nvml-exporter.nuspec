@@ -6,7 +6,7 @@
     <version>0.0.1</version>
     <packageSourceUrl>https://github.com/oko/nvml-exporter-rs</packageSourceUrl>
     <owners>Jacob Okamoto</owners>
-    <title>nvml-exporter (Install)</title>
+    <title>nvml-exporter</title>
     <authors>Jacob Okamoto</authors>
     <projectUrl>https://github.com/oko/nvml-exporter-rs</projectUrl>
     <licenseUrl>https://github.com/oko/nvml-exporter-rs/blob/main/LICENSE</licenseUrl>
