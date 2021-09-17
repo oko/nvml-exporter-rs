@@ -1,1 +1,1 @@
-choco install -y --force -s . nvml-exporter --params "'/EnableThrottleReasons'" # --params "'/ListenPort:9500'"
+choco upgrade -y --force -dv -s . nvml-exporter # --params "'/EnableThrottleReasons'" # --params "'/ListenPort:9500'"

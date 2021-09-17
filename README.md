@@ -5,13 +5,14 @@ This is a Rust implementation of an NVML exporter for Prometheus.
 ## Prerequisites
 
 * NVIDIA GPU drivers providing `nvml.dll` in `$env:PATH` (this should be the case by default using normal GeForce drivers)
+* **[Build only]:** Rust >1.53 installed
 
 ## Building
 
 Non-Windows-service binary:
 
 ```
-cargo build
+cargo build --bin nvml_exporter
 ```
 
 Windows service binary:
@@ -19,6 +20,52 @@ Windows service binary:
 ```shell
 cargo build --bin nvml_exporter_svc --features=winsvc
 ```
+
+## Installing
+
+### Linux
+
+On Linux w/o dedicated packaging, copy the binary to `/usr/local/bin` and add a `systemd` unit file?:
+
+```
+[Unit]
+Description=NVML Exporter
+Wants=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nvml_exporter
+```
+
+### Windows
+
+On Windows, you can use the `nvml-exporter` chocolatey package to install this. In order to preserve package `--param` flags from installation, first run:
+
+```
+choco feature enable --name=useRememberedArgumentsForUpgrades
+```
+
+Then install the package using:
+
+```
+choco install nvml-exporter
+```
+
+You can change the port used for listening (default=9944):
+
+```
+--params "'/ListenPort:12345'"
+```
+
+You can also enable collection of GPU throttling reasons (disabled by default):
+
+```
+--params "'/EnableThrottleReasons'"
+```
+
+ECC memory error collection is disabled unless ECC memory is available and currently in ECC mode. GeForce series GPUs do not have ECC memory.
+
+If you need a custom package build for testing, see the "Packaging" section below.
 
 ## Running
 
@@ -47,6 +94,7 @@ New metrics may be added by:
 1. Adding the field to the `Metrics` struct. `Gauge` should be used for global (system-wide) metrics, whereas `GaugeVec` should be used for metrics that are per-device.
 2. Adding the field initialization to `Metrics::new()` with the appropriate macro.
 3. Adding the collection implementation to `main::gather()`.
+4. New metrics should have their collection time impact measured with the `timed!` macro provided inline, and if costlier than a few milliseconds they should have an enable/disable mechanism flag added to the binary (see for example `--throttle-reasons`)
 
 ## Packaging
 

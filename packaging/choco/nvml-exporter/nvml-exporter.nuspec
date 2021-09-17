@@ -3,16 +3,37 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>nvml-exporter</id>
-    <version>0.0.1</version>
-    <packageSourceUrl>https://github.com/oko/nvml-exporter-rs</packageSourceUrl>
+    <version>0.0.2</version>
+    <packageSourceUrl>https://github.com/oko/nvml-exporter-rs/blob/main/packaging/choco/nvml-exporter/nvml-exporter.nuspec</packageSourceUrl>
     <owners>Jacob Okamoto</owners>
-    <title>nvml-exporter</title>
+    <title>NVML Exporter</title>
     <authors>Jacob Okamoto</authors>
     <projectUrl>https://github.com/oko/nvml-exporter-rs</projectUrl>
     <licenseUrl>https://github.com/oko/nvml-exporter-rs/blob/main/LICENSE</licenseUrl>
-    <tags>nvml-exporter prometheus nvml nvidia</tags>
+    <mailingListUrl>https://github.com/oko/nvml-exporter-rs/issues</mailingListUrl>
+    <bugTrackerUrl>https://github.com/oko/nvml-exporter-rs/issues</bugTrackerUrl>
+    <projectSourceUrl>https://github.com/oko/nvml-exporter-rs</projectSourceUrl>
+    <tags>nvml-exporter prometheus nvml nvidia gpu monitoring</tags>
     <summary>NVML Exporter for Prometheus</summary>
-    <description>This package installs an NVML exporter.</description>
+    <description>This package installs an NVML exporter for NVIDIA GPU metrics via the Prometheus metrics data format.
+
+    ## Configuration
+
+    You can change the port used for listening (default=9944):
+
+    ```
+    --params "'/ListenPort:12345'"
+    ```
+
+    You can also enable collection of GPU throttling reasons (disabled by default):
+
+    ```
+    --params "'/EnableThrottleReasons'"
+    ```
+
+    ECC memory error collection is disabled unless ECC memory is available and currently in ECC mode. GeForce GPUs do not have ECC memory.
+    </description>
+    <releaseNotes>https://github.com/oko/nvml-exporter-rs/releases</releaseNotes>
   </metadata>
   <files>
     <file src="..\..\..\target\release\nvml_exporter_svc.exe" target="tools" />

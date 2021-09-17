@@ -1,2 +1,2 @@
 ﻿Stop-Service nvml-exporter
-sc.exe delete nvml-exporter
+Write-Debug "stopped nvml-exporter service"

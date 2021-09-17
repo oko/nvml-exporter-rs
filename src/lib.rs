@@ -1,10 +1,13 @@
 extern crate nvml_wrapper as nvml;
 
+use std::net::SocketAddr;
+use std::str::FromStr;
+use std::string::ToString;
+use std::sync::Arc;
+use std::time::SystemTime;
+
 use clap::{App, Arg};
 use futures::channel::oneshot;
-use std::str::FromStr;
-use stderrlog;
-
 use futures::channel::oneshot::{Receiver, Sender};
 use futures::future::join_all;
 use log::{debug, error, info, trace, warn};
@@ -14,14 +17,12 @@ use nvml::error::NvmlError;
 use nvml::NVML;
 use prometheus::{default_registry, Encoder, Gauge, GaugeVec, TextEncoder};
 use prometheus::{register_gauge, register_gauge_vec};
-use std::net::SocketAddr;
-use std::string::ToString;
-use std::sync::Arc;
-use std::time::SystemTime;
+use stderrlog;
 use warp::Filter;
 
-mod str_helpers;
 use crate::str_helpers::*;
+
+mod str_helpers;
 
 pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<Sender<()>>, Options) {
     let matches = App::new("nvml-exporter-rs")
@@ -147,7 +148,7 @@ struct Metrics {
 
 impl Metrics {
     fn new() -> prometheus::Result<Metrics> {
-        let dl = &["device"];
+        let dl = &["device", "uuid"];
         Ok(Metrics {
             g_device_count: register_gauge!("nvml_device_count", "number of nvml devices")?,
             gv_device_temp: register_gauge_vec!("nvml_temperature", "temperature of nvml device", dl)?,
@@ -163,17 +164,17 @@ impl Metrics {
             gv_max_pcie_link_generation: register_gauge_vec!("nvml_max_pcie_link_generation", "max pcie link generation", dl)?,
             gv_utilization_gpu: register_gauge_vec!("nvml_utilization_gpu", "GPU utilization", dl)?,
             gv_utilization_memory: register_gauge_vec!("nvml_utilization_memory", "memory utilization", dl)?,
-            gv_clock: register_gauge_vec!("nvml_clock", "clock speed", &["device", "clock_id", "type"])?,
-            gv_applications_clock: register_gauge_vec!("nvml_applications_clock", "clock speed", &["device", "clock_id", "type"])?,
-            gv_memory_info: register_gauge_vec!("nvml_memory_info", "memory information", &["device", "state"])?,
+            gv_clock: register_gauge_vec!("nvml_clock", "clock speed", &["device", "uuid", "clock_id", "type"])?,
+            gv_applications_clock: register_gauge_vec!("nvml_applications_clock", "clock speed", &["device", "uuid", "clock_id", "type"])?,
+            gv_memory_info: register_gauge_vec!("nvml_memory_info", "memory information", &["device", "uuid", "state"])?,
             gv_display_active: register_gauge_vec!("nvml_display_active", "display active", dl)?,
             gv_display_mode: register_gauge_vec!("nvml_display_mode", "display mode", dl)?,
             gv_encoder_capacity: register_gauge_vec!("nvml_encoder_capacity", "encoder capacity", dl)?,
             gv_encoder_stats_sessions_count: register_gauge_vec!("nvml_encoder_stats_sessions_count", "session count for encoder sessions", dl)?,
             gv_encoder_stats_average_fps: register_gauge_vec!("nvml_encoder_stats_average_fps", "average fps for encoder sessions", dl)?,
             gv_encoder_stats_average_latency: register_gauge_vec!("nvml_encoder_stats_average_latency", "average latency for encoder sessions", dl)?,
-            gv_current_clocks_throttle_reasons: register_gauge_vec!("nvml_current_clocks_throttle_reasons", "current clock throttling reason code", &["device", "reason"])?,
-            gv_memory_error_counters: register_gauge_vec!("nvml_memory_error_counters", "memory error counters", &["device", "mem_error", "ecc_counter", "mem_location"])?,
+            gv_current_clocks_throttle_reasons: register_gauge_vec!("nvml_current_clocks_throttle_reasons", "current clock throttling reason code", &["device", "uuid", "reason"])?,
+            gv_memory_error_counters: register_gauge_vec!("nvml_memory_error_counters", "memory error counters", &["device", "uuid", "mem_error", "ecc_counter", "mem_location"])?,
         })
     }
 }
@@ -189,8 +190,10 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
         let device = ctx.nvml.device_by_index(device_index)?;
         let dev_idx_string = device_index.to_string();
         let dev_idx_str = dev_idx_string.as_str();
+        let dev_uuid_string = device.uuid()?;
+        let dev_uuid = dev_uuid_string.as_str();
 
-        let dl = &[dev_idx_str];
+        let dl = &[dev_idx_str, dev_uuid];
         macro_rules! set_gv {
             ( $member:expr, $labels:expr, $val:expr ) => {
                 $member.with_label_values($labels).set($val as f64);
@@ -236,15 +239,32 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
                 Err(e) => warn!("error collecting utilization rates: {:?}", e),
             }
 
-            let encoder_stats = device.encoder_stats()?;
-            set_gv!(ctx.metrics.gv_encoder_stats_sessions_count, dl, encoder_stats.session_count as f64);
-            set_gv!(ctx.metrics.gv_encoder_stats_average_fps, dl, encoder_stats.average_fps as f64);
-            set_gv!(ctx.metrics.gv_encoder_stats_average_latency, dl, encoder_stats.average_latency as f64);
+            match device.encoder_stats() {
+                Ok(encoder_stats) => {
+                    set_gv!(ctx.metrics.gv_encoder_stats_sessions_count, dl, encoder_stats.session_count as f64);
+                    set_gv!(ctx.metrics.gv_encoder_stats_average_fps, dl, encoder_stats.average_fps as f64);
+                    set_gv!(ctx.metrics.gv_encoder_stats_average_latency, dl, encoder_stats.average_latency as f64);
+                }
+                Err(e) => warn!("error collecting encoder stats: {:?}", e),
+            }
 
-            let fbc_stats = device.fbc_stats()?;
-            set_gv!(ctx.metrics.gv_fbc_stats_sessions_count, dl, fbc_stats.sessions_count as f64);
-            set_gv!(ctx.metrics.gv_fbc_stats_average_fps, dl, fbc_stats.average_fps as f64);
-            set_gv!(ctx.metrics.gv_fbc_stats_average_latency, dl, fbc_stats.average_latency as f64);
+            match device.fbc_stats() {
+                Ok(fbc_stats) => {
+                    set_gv!(ctx.metrics.gv_fbc_stats_sessions_count, dl, fbc_stats.sessions_count as f64);
+                    set_gv!(ctx.metrics.gv_fbc_stats_average_fps, dl, fbc_stats.average_fps as f64);
+                    set_gv!(ctx.metrics.gv_fbc_stats_average_latency, dl, fbc_stats.average_latency as f64);
+                }
+                Err(e) => warn!("error collecting framebuffer capture stats: {:?}", e),
+            }
+
+            match device.memory_info() {
+                Ok(mem) => {
+                    ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, dev_uuid, "free"]).set(mem.free as f64);
+                    ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, dev_uuid, "total"]).set(mem.total as f64);
+                    ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, dev_uuid, "used"]).set(mem.used as f64);
+                }
+                Err(e) => warn!("error fetching current memory info: {:?}", e),
+            };
         });
 
         timed!("clocks", {
@@ -260,27 +280,18 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
                         if cfg!(debug_assertions) {
                             trace!("got metrics for clock ID {:?} and type {:?}", cid, ctype);
                         }
-                        set_gv!(ctx.metrics.gv_clock, &[dev_idx_str, cid_str, ctype_str], clock.unwrap() as f64);
+                        set_gv!(ctx.metrics.gv_clock, &[dev_idx_str, dev_uuid, cid_str, ctype_str], clock.unwrap() as f64);
                     }
                     let aclock = device.clock(ctype.clone(), cid.clone());
                     if aclock.is_ok() {
                         if cfg!(debug_assertions) {
                             trace!("got metrics for applications clock ID {:?} and type {:?}", cid, ctype);
                         }
-                        set_gv!(ctx.metrics.gv_applications_clock, &[dev_idx_str, cid_str, ctype_str], aclock.unwrap() as f64);
+                        set_gv!(ctx.metrics.gv_applications_clock, &[dev_idx_str, dev_uuid, cid_str, ctype_str], aclock.unwrap() as f64);
                     }
                 }
             }
         });
-
-        match device.memory_info() {
-            Ok(mem) => {
-                ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, "free"]).set(mem.free as f64);
-                ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, "total"]).set(mem.total as f64);
-                ctx.metrics.gv_memory_info.with_label_values(&[dev_idx_str, "used"]).set(mem.used as f64);
-            }
-            Err(e) => warn!("error fetching current memory info: {:?}", e),
-        };
 
         if ctx.opts.enable_throttle_reasons {
             timed!("throttle_reasons", {
@@ -300,7 +311,7 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
                         ] {
                             ctx.metrics
                                 .gv_current_clocks_throttle_reasons
-                                .with_label_values(&[dev_idx_str, throttle_reason_str(reason)])
+                                .with_label_values(&[dev_idx_str, dev_uuid, throttle_reason_str(reason)])
                                 .set(if throttle_reasons.contains(reason) { 1 } else { 0 } as f64);
                         }
                     }
@@ -333,7 +344,7 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
                                             .metrics
                                             .gv_memory_error_counters
                                             // &["device", "mem_error", "ecc_counter", "mem_location"]
-                                            .with_label_values(&[dev_idx_str, memory_error_type_str(&err), ecc_counter_type_str(&ecc), memory_location_str(&loc)])
+                                            .with_label_values(&[dev_idx_str, dev_uuid, memory_error_type_str(&err), ecc_counter_type_str(&ecc), memory_location_str(&loc)])
                                             .set(ct as f64),
                                         Err(e) => {
                                             if cfg!(debug_assertions) {

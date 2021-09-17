@@ -8,6 +8,10 @@ name = "nvml_exporter"
 path = "src/lib.rs"
 
 [[bin]]
+name = "nvml_exporter"
+path = "src/main.rs"
+
+[[bin]]
 name = "nvml_exporter_svc"
 path = "src/winsvc/winsvc.rs"
 required-features = ["winsvc"]
