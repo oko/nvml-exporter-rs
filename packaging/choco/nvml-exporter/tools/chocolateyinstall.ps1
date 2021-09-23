@@ -9,7 +9,7 @@ $packageParameters = $env:chocolateyPackageParameters;
 ## /EnableThrottleReasons
 $enableThrottleReasons = $false
 ## /ListenPort:
-$port = 9944
+$port = 9996
 
 if ($packageParameters) {
     $match_pattern = "\/(?<option>([a-zA-Z]+)):(?<value>([`"'])?([a-zA-Z0-9- _\\:\.]+)([`"'])?)|\/(?<option>([a-zA-Z]+))"

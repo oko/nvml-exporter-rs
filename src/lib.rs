@@ -36,7 +36,7 @@ pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<
                 .about("listen address")
                 .multiple_occurrences(true)
                 .takes_value(true)
-                .default_values(&["[::]:9944", "0.0.0.0:9944"]),
+                .default_values(&["[::]:9996", "0.0.0.0:9996"]),
         )
         .arg(Arg::new("throttle-reasons").long("throttle-reasons").takes_value(false))
         .arg(Arg::new("verbosity").short('v').multiple_occurrences(true).takes_value(false))

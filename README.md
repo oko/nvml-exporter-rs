@@ -4,7 +4,9 @@ This is a Rust implementation of an NVML exporter for Prometheus.
 
 ## Prerequisites
 
-* NVIDIA GPU drivers providing `nvml.dll` in `$env:PATH` (this should be the case by default using normal GeForce drivers)
+* NVIDIA GPU drivers providing
+    * Windows: `nvml.dll` in `$env:PATH` (this should be the case by default using normal GeForce drivers)
+    * Linux: `libnvidia-ml.so` in `$LD_LIBRARY_PATH`
 * **[Build only]:** Rust >1.53 installed
 
 ## Building
@@ -51,7 +53,7 @@ Then install the package using:
 choco install nvml-exporter
 ```
 
-You can change the port used for listening (default=9944):
+You can change the port used for listening (default=9996):
 
 ```
 --params "'/ListenPort:12345'"
