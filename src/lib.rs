@@ -14,7 +14,7 @@ use log::{debug, error, info, trace, warn};
 use nvml::bitmasks::device::ThrottleReasons;
 use nvml::enum_wrappers::device::{Clock, ClockId, EccCounter, MemoryError, MemoryLocation, TemperatureSensor};
 use nvml::error::NvmlError;
-use nvml::NVML;
+use nvml::Nvml;
 use prometheus::{default_registry, Encoder, Gauge, GaugeVec, TextEncoder};
 use prometheus::{register_gauge, register_gauge_vec};
 use stderrlog;
@@ -33,7 +33,7 @@ pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<
                 .short('l')
                 .long("listen")
                 .value_name("SOCKET_ADDRESS")
-                .about("listen address")
+                .help("listen address")
                 .multiple_occurrences(true)
                 .takes_value(true)
                 .default_values(&["[::]:9996", "0.0.0.0:9996"]),
@@ -72,14 +72,14 @@ pub struct Options {
 
 struct Context {
     metrics: Metrics,
-    nvml: NVML,
+    nvml: Nvml,
     opts: Options,
 }
 
 pub async fn serve(binds: Vec<(SocketAddr, Receiver<()>)>, opts: Options) {
     let ctx = Arc::new(Context {
         metrics: Metrics::new().unwrap(),
-        nvml: NVML::init().unwrap(),
+        nvml: Nvml::init().unwrap(),
         opts: opts.clone(),
     });
 
