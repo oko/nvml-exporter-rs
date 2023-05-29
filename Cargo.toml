@@ -18,10 +18,10 @@ required-features = ["winsvc"]
 
 [dependencies]
 nvml-wrapper = { git = "https://github.com/Cldfire/nvml-wrapper", rev = "d682fb651dae6873b7663e68414a20756386791d" }
-prometheus = "~0.12"
+prometheus = "~0.13"
 hyper = { version = "~0.14", features = ["full"] }
 tokio = { version = "~1", features = ["full"] }
-clap = "~3.1"
+clap = "~4"
 futures = "~0.3"
 warp = "~0.3"
 log = "~0.4"

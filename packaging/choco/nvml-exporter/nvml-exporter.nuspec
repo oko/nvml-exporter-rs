@@ -3,7 +3,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>nvml-exporter</id>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <packageSourceUrl>https://github.com/oko/nvml-exporter-rs/blob/main/packaging/choco/nvml-exporter/nvml-exporter.nuspec</packageSourceUrl>
     <owners>Jacob Okamoto</owners>
     <title>NVML Exporter</title>

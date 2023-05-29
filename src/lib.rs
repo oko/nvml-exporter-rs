@@ -6,13 +6,13 @@ use std::string::ToString;
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use clap::{App, Arg};
+use clap::{Arg, ArgAction, Command};
 use futures::channel::oneshot;
 use futures::channel::oneshot::{Receiver, Sender};
 use futures::future::join_all;
 use log::{debug, error, info, trace, warn};
 use nvml::bitmasks::device::ThrottleReasons;
-use nvml::enum_wrappers::device::{Clock, ClockId, EccCounter, MemoryError, MemoryLocation, TemperatureSensor};
+use nvml::enum_wrappers::device::{Clock, ClockId, EccCounter, EncoderType, MemoryError, MemoryLocation, TemperatureSensor};
 use nvml::error::NvmlError;
 use nvml::Nvml;
 use prometheus::{default_registry, Encoder, Gauge, GaugeVec, TextEncoder};
@@ -25,7 +25,7 @@ use crate::str_helpers::*;
 mod str_helpers;
 
 pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<Sender<()>>, Options) {
-    let matches = App::new("nvml-exporter-rs")
+    let matches = Command::new("nvml-exporter-rs")
         .version("0.0.1")
         .about("Prometheus exporter for NVIDIA GPU NVML metrics")
         .arg(
@@ -34,18 +34,17 @@ pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<
                 .long("listen")
                 .value_name("SOCKET_ADDRESS")
                 .help("listen address")
-                .multiple_occurrences(true)
-                .takes_value(true)
+                .action(ArgAction::Append)
                 .default_values(&["[::]:9996", "0.0.0.0:9996"]),
         )
-        .arg(Arg::new("throttle-reasons").long("throttle-reasons").takes_value(false))
-        .arg(Arg::new("verbosity").short('v').multiple_occurrences(true).takes_value(false))
+        .arg(Arg::new("throttle-reasons").long("throttle-reasons").action(ArgAction::SetTrue))
+        .arg(Arg::new("verbosity").short('v').action(ArgAction::Count))
         .get_matches_from(args);
 
-    let verbosity = matches.occurrences_of("verbosity");
+    let verbosity = matches.get_count("verbosity");
     stderrlog::new().module(module_path!()).module("nvml_exporter").verbosity(verbosity as usize).show_module_names(true).init().unwrap();
 
-    let addrs = matches.values_of("listen").unwrap().map(|val: &str| val.to_string()).collect::<Vec<_>>();
+    let addrs = matches.get_many::<String>("listen").unwrap().map(|val| val.to_string()).collect::<Vec<_>>();
 
     let mut senders: Vec<Sender<()>> = vec![];
 
@@ -59,7 +58,7 @@ pub fn server_setup(args: Vec<String>) -> (Vec<(SocketAddr, Receiver<()>)>, Vec<
         .collect::<Vec<_>>();
 
     let opts = Options {
-        enable_throttle_reasons: matches.is_present("throttle-reasons"),
+        enable_throttle_reasons: matches.get_flag("throttle-reasons"),
     };
 
     (binds, senders, opts)
@@ -138,7 +137,8 @@ struct Metrics {
     gv_memory_info: GaugeVec,
     gv_display_active: GaugeVec,
     gv_display_mode: GaugeVec,
-    gv_encoder_capacity: GaugeVec,
+    gv_encoder_capacity_h264: GaugeVec,
+    gv_encoder_capacity_hevc: GaugeVec,
     gv_encoder_stats_sessions_count: GaugeVec,
     gv_encoder_stats_average_fps: GaugeVec,
     gv_encoder_stats_average_latency: GaugeVec,
@@ -169,7 +169,8 @@ impl Metrics {
             gv_memory_info: register_gauge_vec!("nvml_memory_info", "memory information", &["device", "uuid", "state"])?,
             gv_display_active: register_gauge_vec!("nvml_display_active", "display active", dl)?,
             gv_display_mode: register_gauge_vec!("nvml_display_mode", "display mode", dl)?,
-            gv_encoder_capacity: register_gauge_vec!("nvml_encoder_capacity", "encoder capacity", dl)?,
+            gv_encoder_capacity_h264: register_gauge_vec!("nvml_encoder_capacity_h264", "encoder capacity", dl)?,
+            gv_encoder_capacity_hevc: register_gauge_vec!("nvml_encoder_capacity_hevc", "encoder capacity", dl)?,
             gv_encoder_stats_sessions_count: register_gauge_vec!("nvml_encoder_stats_sessions_count", "session count for encoder sessions", dl)?,
             gv_encoder_stats_average_fps: register_gauge_vec!("nvml_encoder_stats_average_fps", "average fps for encoder sessions", dl)?,
             gv_encoder_stats_average_latency: register_gauge_vec!("nvml_encoder_stats_average_latency", "average latency for encoder sessions", dl)?,
@@ -207,9 +208,8 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
         macro_rules! timed {
             ( $n:expr, $e:expr ) => {
                 let now = SystemTime::now();
-                let res = $e;
+                let _ = $e;
                 trace!("{}: took {}ms", $n, now.elapsed().unwrap().as_millis());
-                res
             };
         }
         #[cfg(not(debug_assertions))]
@@ -241,6 +241,8 @@ fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
 
             match device.encoder_stats() {
                 Ok(encoder_stats) => {
+                    set_gv!(ctx.metrics.gv_encoder_capacity_h264, dl, device.encoder_capacity(EncoderType::H264)?);
+                    set_gv!(ctx.metrics.gv_encoder_capacity_hevc, dl, device.encoder_capacity(EncoderType::HEVC)?);
                     set_gv!(ctx.metrics.gv_encoder_stats_sessions_count, dl, encoder_stats.session_count as f64);
                     set_gv!(ctx.metrics.gv_encoder_stats_average_fps, dl, encoder_stats.average_fps as f64);
                     set_gv!(ctx.metrics.gv_encoder_stats_average_latency, dl, encoder_stats.average_latency as f64);
