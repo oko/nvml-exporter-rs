@@ -17,21 +17,21 @@
     <summary>NVML Exporter for Prometheus</summary>
     <description>This package installs an NVML exporter for NVIDIA GPU metrics via the Prometheus metrics data format.
 
-    ## Configuration
+## Configuration
 
-    You can change the port used for listening (default=9996):
+You can change the port used for listening (default=9996):
 
-    ```
-    --params "'/ListenPort:12345'"
-    ```
+```
+--params "'/ListenPort:12345'"
+```
 
-    You can also enable collection of GPU throttling reasons (disabled by default):
+You can also enable collection of GPU throttling reasons (disabled by default):
 
-    ```
-    --params "'/EnableThrottleReasons'"
-    ```
+```
+--params "'/EnableThrottleReasons'"
+```
 
-    ECC memory error collection is disabled unless ECC memory is available and currently in ECC mode. GeForce GPUs do not have ECC memory.
+ECC memory error collection is disabled unless ECC memory is available and currently in ECC mode. GeForce GPUs do not have ECC memory.
     </description>
     <releaseNotes>https://github.com/oko/nvml-exporter-rs/releases</releaseNotes>
   </metadata>
