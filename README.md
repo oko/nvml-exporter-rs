@@ -111,3 +111,25 @@ Install the Chocolatey package you just built with:
 ```powershell
 .\scripts\install.bat
 ```
+
+## Release
+
+Binary releases are currently created for Windows platforms **only**.
+
+### Release Process
+
+1. Push a commit bumping the version number in `packaging\choco\nvml-exporter\nvml-exporter.nuspec`
+2. Create a new release on GitHub
+3. Wait for the `release` GitHub Action to complete successfully
+4. Open the `release` action summary and download the artifact zip file
+5. Extract the `.nupkg` from the artifact zip and attach it to the release
+6. Check https://community.chocolatey.org/account/Packages for the pending Chocolatey release
+7. Make sure the new version passes moderation
+
+### Release Mechanism
+
+1. GitHub Action for the `release` event builds a `nupkg`
+2. GitHub Action for the `release` event publishes the `nupkg` build to Chocolatey.org
+3. The new version is held for moderation on Chocolatey.org
+4. Any moderation issues on Chocolatey.org are resolved
+5. Package is released for public visibility by Chocolatey.org package moderators
