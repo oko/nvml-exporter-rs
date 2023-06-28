@@ -13,10 +13,11 @@ path = "src/main.rs"
 
 [[bin]]
 name = "nvml_exporter_svc"
-path = "src/winsvc/winsvc.rs"
+path = "src/main.rs"
 required-features = ["winsvc"]
 
 [dependencies]
+anyhow = "1.0.71"
 nvml-wrapper = { git = "https://github.com/Cldfire/nvml-wrapper", rev = "d682fb651dae6873b7663e68414a20756386791d" }
 prometheus = "~0.13"
 hyper = { version = "~0.14", features = ["full"] }
@@ -28,6 +29,7 @@ log = "~0.4"
 stderrlog = "~0.5"
 term = "~0.7"
 chrono = "~0.4"
+universal-service = "0.1.0"
 
 [target.'cfg(windows)'.dependencies]
 windows-service = {version = "~0.4", optional = true}
