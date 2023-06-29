@@ -118,7 +118,7 @@ Binary releases are currently created for Windows platforms **only**.
 
 ### Release Process
 
-1. Push a commit bumping the version number in `packaging\choco\nvml-exporter\nvml-exporter.nuspec`
+1. Push a commit bumping the version number in `packaging\choco\nvml-exporter\nvml-exporter.nuspec` and in `Cargo.toml`
 2. Create a new release on GitHub
 3. Wait for the `release` GitHub Action to complete successfully
 4. Open the `release` action summary and download the artifact zip file
