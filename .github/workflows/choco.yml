@@ -33,7 +33,7 @@ jobs:
             packaging/choco/nvml-exporter/nvml-exporter*.nupkg
 
       - name: Push Package
-        if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release_noexist' }}
         env:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
