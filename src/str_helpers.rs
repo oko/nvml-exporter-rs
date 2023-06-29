@@ -1,5 +1,9 @@
 use nvml::bitmasks::device::ThrottleReasons;
-use nvml::enum_wrappers::device::{Clock, ClockId, EccCounter, MemoryError, MemoryLocation};
+use nvml::enum_wrappers::device::Clock;
+use nvml::enum_wrappers::device::ClockId;
+use nvml::enum_wrappers::device::EccCounter;
+use nvml::enum_wrappers::device::MemoryError;
+use nvml::enum_wrappers::device::MemoryLocation;
 
 pub fn clock_id_str(cid: ClockId) -> &'static str {
     match cid {
