@@ -32,7 +32,7 @@ chrono = "~0.4"
 universal-service = "0.1.0"
 
 [target.'cfg(windows)'.dependencies]
-windows-service = {version = "~0.4", optional = true}
+windows-service = {version = "~0.6", optional = true}
 
 [features]
 winsvc = ["windows-service"]
