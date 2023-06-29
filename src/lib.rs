@@ -9,7 +9,6 @@ use std::time::SystemTime;
 use clap::{Arg, ArgAction, Command};
 use futures::channel::oneshot;
 use futures::channel::oneshot::{Receiver, Sender};
-use futures::future::join_all;
 use log::{debug, error, info, trace, warn};
 use nvml::bitmasks::device::ThrottleReasons;
 use nvml::enum_wrappers::device::{Clock, ClockId, EccCounter, EncoderType, MemoryError, MemoryLocation, TemperatureSensor};
@@ -18,6 +17,7 @@ use nvml::Nvml;
 use prometheus::{default_registry, Encoder, Gauge, GaugeVec, TextEncoder};
 use prometheus::{register_gauge, register_gauge_vec};
 use stderrlog;
+use tokio::task::JoinSet;
 use warp::Filter;
 
 use crate::str_helpers::*;
@@ -82,7 +82,7 @@ pub async fn serve(binds: Vec<(SocketAddr, Receiver<()>)>, opts: Options) {
         opts: opts.clone(),
     });
 
-    let mut joins: Vec<_> = vec![];
+    let mut set = JoinSet::new();
     binds.into_iter().for_each(|(addr, recv)| {
         let ctx = ctx.clone();
         let routes = warp::any().map(move || {
@@ -104,10 +104,13 @@ pub async fn serve(binds: Vec<(SocketAddr, Receiver<()>)>, opts: Options) {
             warn!("gracefully shutting down exporter on {}", addr.to_string());
         });
         info!("starting server on {}", addr);
-        joins.push(tokio::task::spawn(server));
+        set.spawn(server);
     });
 
-    let results = join_all(joins).await;
+    let mut results: Vec<_> = Vec::with_capacity(set.len());
+    while let Some(res) = set.join_next().await {
+        results.push(res);
+    }
     for res in results.iter() {
         match res {
             Ok(_) => (),
