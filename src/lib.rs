@@ -139,6 +139,7 @@ pub async fn serve(binds: Vec<(SocketAddr, Receiver<()>)>, opts: Options) {
 
 #[derive(Clone)]
 struct Metrics {
+    gv_exporter: GaugeVec,
     g_device_count: Gauge,
     gv_device_temp: GaugeVec,
     gv_device_power_usage: GaugeVec,
@@ -171,6 +172,7 @@ impl Metrics {
     fn new() -> prometheus::Result<Metrics> {
         let dl = &["device", "uuid"];
         Ok(Metrics {
+            gv_exporter: register_gauge_vec!("nvml_exporter_info", "information about nvml-exporter itself", &["version"])?,
             g_device_count: register_gauge!("nvml_device_count", "number of nvml devices")?,
             gv_device_temp: register_gauge_vec!("nvml_temperature", "temperature of nvml device", dl)?,
             gv_device_power_usage: register_gauge_vec!("nvml_power_usage", "power usage of nvml device", dl)?,
@@ -204,6 +206,9 @@ impl Metrics {
 fn gather(ctx: Arc<Context>) -> Result<(), NvmlError> {
     let now = SystemTime::now();
     debug!("starting NVML gather at {}", chrono::Utc::now().format("%c").to_string());
+
+    let exporter_version = std::env!("CARGO_PKG_VERSION");
+    ctx.metrics.gv_exporter.with_label_values(&[exporter_version]).set(1.);
 
     let count = ctx.nvml.device_count()?;
     ctx.metrics.g_device_count.set(count as f64);
